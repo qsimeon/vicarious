@@ -1,0 +1,127 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Vicarious — see through my eyes</title>
+<style>
+  :root{
+    --bg:#0B0B0F; --card:#15151C; --card2:#1C1C26; --cyan:#22D3EE;
+    --mute:#8A8A99; --green:#34D399; --purp:#7C5CFF; --amber:#FBBF24;
+  }
+  *{box-sizing:border-box;font-family:Inter,system-ui,-apple-system,Segoe UI,Roboto,sans-serif}
+  body{margin:0;background:var(--bg);color:#fff;display:flex;justify-content:center}
+  .app{width:420px;min-height:100vh;padding:28px 20px 40px}
+  h1{font-size:30px;font-weight:800;margin:6px 0 4px}
+  .kicker{color:var(--cyan);font-weight:800;font-size:13px;letter-spacing:.5px}
+  .sub{color:var(--mute);font-size:15px;line-height:1.45;margin:0}
+  .pov{height:210px;border-radius:18px;margin:18px 0;position:relative;overflow:hidden;
+       background:linear-gradient(135deg,var(--purp),#0d4fcf);display:flex;align-items:center;justify-content:center}
+  .pov img{width:100%;height:100%;object-fit:cover}
+  .tag{position:absolute;top:14px;left:14px;background:#000a;border-radius:20px;
+       padding:5px 10px;font-size:11px;font-weight:800;display:flex;gap:6px;align-items:center}
+  .dot{width:7px;height:7px;border-radius:50%;background:#FF4D4D;display:inline-block}
+  .btn{width:100%;border:0;border-radius:16px;background:var(--cyan);color:#06121A;
+       font-weight:800;font-size:17px;padding:16px;cursor:pointer}
+  .card{background:var(--card);border-radius:16px;padding:16px;margin-top:14px}
+  .row{display:flex;justify-content:space-between;align-items:center}
+  .timer{background:var(--card);border-radius:20px;padding:6px 12px;color:var(--cyan);font-weight:800}
+  .bar{height:6px;border-radius:3px;background:var(--card2);overflow:hidden;margin:12px 0}
+  .bar > i{display:block;height:100%;background:var(--cyan);width:100%;transition:width 1s linear}
+  input{width:100%;background:var(--card2);border:0;color:#fff;border-radius:14px;
+        padding:13px 14px;font-size:14px;margin-top:8px}
+  .hidden{display:none}
+  .recap{border:1px solid var(--green)}
+</style>
+</head>
+<body>
+<div class="app">
+
+  <!-- PAYWALL -->
+  <section id="paywall">
+    <div class="kicker">VICARIOUS</div>
+    <h1>See through my eyes.</h1>
+    <p class="sub">Pay $1. Get exactly 60 seconds of my live POV.</p>
+    <div class="pov">
+      <span class="tag"><span class="dot"></span>LIVE</span>
+      <span>👁 POV feed · Mentra Live</span>
+    </div>
+    <div class="card row" style="margin-bottom:14px">
+      <span style="color:var(--mute);font-weight:600" id="ahead">Online now</span>
+      <span style="color:var(--green);font-weight:600">● ready</span>
+    </div>
+    <button class="btn" style="margin-top:14px" onclick="pay()">Pay $1 — Stream 60s</button>
+    <p class="sub" style="font-size:12px;margin-top:10px">Mock checkout. One minute, one viewer at a time.</p>
+  </section>
+
+  <!-- LIVE -->
+  <section id="live" class="hidden">
+    <div class="row">
+      <strong style="display:flex;gap:8px;align-items:center"><span class="dot"></span>LIVE · through my eyes</strong>
+      <span class="timer">⏱ <span id="clock">1:00</span></span>
+    </div>
+    <div class="pov" style="margin-top:14px">
+      <img id="feed" alt="" />
+      <span id="povtext" style="position:absolute">connecting…</span>
+    </div>
+    <div class="bar"><i id="barfill"></i></div>
+    <div id="recapcard" class="card recap hidden">
+      <span class="sub" style="color:var(--green);font-weight:800">✨ SESSION COMPLETE</span>
+      <p id="recap" style="margin:8px 0 0;font-size:14px"></p>
+    </div>
+  </section>
+
+</div>
+
+<script>
+let total=60, left=60, tick=null;
+
+async function pay(){
+  const r = await fetch("/pay",{method:"POST"});
+  const d = await r.json();
+  if(!d.paid) return;
+  document.getElementById("paywall").classList.add("hidden");
+  document.getElementById("live").classList.remove("hidden");
+  connect();
+}
+
+function setClock(){const m=Math.floor(left/60),s=String(left%60).padStart(2,'0');
+  document.getElementById("clock").textContent=`${m}:${s}`;
+  document.getElementById("barfill").style.width=(left/total*100)+"%";}
+
+function connect(){
+  const proto=location.protocol==="https:"?"wss":"ws";
+  const ws=new WebSocket(`${proto}://${location.host}/ws`);
+  ws.onmessage=ev=>{
+    const e=JSON.parse(ev.data);
+    if(e.type==="queue"){
+      document.getElementById("povtext").textContent=`You're #${e.ahead+1} in line · ~${e.eta_sec}s`;
+    }
+    if(e.type==="session_start"){
+      total=left=e.seconds;setClock();
+      tick=setInterval(()=>{left=Math.max(0,left-1);setClock();if(left<=0)clearInterval(tick);},1000);
+      document.getElementById("povtext").textContent="";
+    }
+    if(e.type==="frame"){
+      // THE CORE: show the broadcaster's live POV frame, streamed from the server.
+      document.getElementById("feed").src=e.data_url;
+      document.getElementById("povtext").textContent="";
+    }
+    if(e.type==="feed_dark"){
+      document.getElementById("povtext").textContent="⚫ feed went dark — refunding";
+    }
+    if(e.type==="session_end"){
+      if(tick) clearInterval(tick);
+      document.getElementById("recapcard").classList.remove("hidden");
+      document.getElementById("recap").textContent =
+        e.refund_issued ? "Feed unavailable — you were refunded."
+                        : `That's 60 seconds through my eyes. ${e.frames} frames.`;
+    }
+    if(e.type==="error"){
+      document.getElementById("povtext").textContent="Error: "+e.msg;
+    }
+  };
+}
+</script>
+</body>
+</html>
