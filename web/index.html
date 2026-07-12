@@ -65,6 +65,18 @@
       <span id="povtext" style="position:absolute">connecting…</span>
     </div>
     <div class="bar"><i id="barfill"></i></div>
+
+    <button class="btn" id="gamifyBtn" style="margin-top:6px;background:var(--purp);color:#fff"
+            onclick="gamify()">🎮 Gamify this — play my world</button>
+    <div id="worldcard" class="card hidden" style="border:1px solid var(--purp)">
+      <div class="row"><span class="sub" style="color:var(--purp);font-weight:800">🌍 GENERATED WORLD</span>
+        <span id="worldnote" class="sub" style="font-size:11px"></span></div>
+      <div class="pov" style="margin-top:10px;background:#000">
+        <img id="world" alt="" />
+        <span id="worldtext" style="position:absolute">generating…</span>
+      </div>
+    </div>
+
     <div id="recapcard" class="card recap hidden">
       <span class="sub" style="color:var(--green);font-weight:800">✨ SESSION COMPLETE</span>
       <p id="recap" style="margin:8px 0 0;font-size:14px"></p>
@@ -74,7 +86,28 @@
 </div>
 
 <script>
-let total=60, left=60, tick=null;
+let total=60, left=60, tick=null, lastFrame=null;
+
+// THE HACK: pipe the current real POV frame through a generative world model.
+async function gamify(){
+  if(!lastFrame){ return; }
+  const btn=document.getElementById("gamifyBtn");
+  btn.disabled=true; btn.textContent="🌀 generating your world…";
+  document.getElementById("worldcard").classList.remove("hidden");
+  document.getElementById("worldtext").textContent="generating…";
+  try{
+    const r=await fetch("/gamify",{method:"POST",headers:{"Content-Type":"application/json"},
+      body:JSON.stringify({seed:lastFrame})});
+    const d=await r.json();
+    document.getElementById("world").src=d.data_url;
+    document.getElementById("worldtext").textContent="";
+    document.getElementById("worldnote").textContent=d.backend?("via "+d.backend):"";
+  }catch(err){
+    document.getElementById("worldtext").textContent="world-gen failed: "+err;
+  }finally{
+    btn.disabled=false; btn.textContent="🎮 Gamify this — play my world";
+  }
+}
 
 async function pay(){
   const r = await fetch("/pay",{method:"POST"});
@@ -104,6 +137,7 @@ function connect(){
     }
     if(e.type==="frame"){
       // THE CORE: show the broadcaster's live POV frame, streamed from the server.
+      lastFrame=e.data_url;
       document.getElementById("feed").src=e.data_url;
       document.getElementById("povtext").textContent="";
     }
