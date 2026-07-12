@@ -27,8 +27,7 @@ run.py             # entrypoint: uvicorn app.server:app
 ## Run (≈2 min, with uv)
 
 ```bash
-uv venv && source .venv/bin/activate
-uv pip install -r requirements.txt
+uv sync                       # build the locked env from pyproject.toml
 cp .env.example .env          # defaults are fine for the webcam demo
 uv run python run.py          # open http://localhost:8000
 ```

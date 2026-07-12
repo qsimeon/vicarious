@@ -3,3 +3,10 @@ __pycache__/
 .venv/
 .env
 .DS_Store
+
+# dev/build tooling artifacts
+.playwright-mcp/
+dev/state.json
+dev/grounding.jpg
+*.png
+*.jpg

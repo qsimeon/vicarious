@@ -115,12 +115,16 @@ function connect(){
       document.getElementById("recapcard").classList.remove("hidden");
       document.getElementById("recap").textContent =
         e.refund_issued ? "Feed unavailable — you were refunded."
-                        : `That's 60 seconds through my eyes. ${e.frames} frames.`;
+                        : `That's ${total}s through my eyes. ${e.frames} frames.`;
     }
     if(e.type==="error"){
+      if(tick) clearInterval(tick);
       document.getElementById("povtext").textContent="Error: "+e.msg;
     }
   };
+  // abnormal disconnect (server crash / network drop): stop the clock, don't lie.
+  ws.onclose=()=>{ if(tick) clearInterval(tick); };
+  ws.onerror=()=>{ if(tick) clearInterval(tick); };
 }
 </script>
 </body>

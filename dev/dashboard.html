@@ -1,0 +1,173 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Vicarious — Build Monitor</title>
+<style>
+  :root{
+    --bg:#0A0A0C; --panel:#131318; --panel2:#1A1A22; --line:#26262F;
+    --ink:#ECECF1; --mute:#8A8A99; --cyan:#22D3EE; --green:#34D399;
+    --amber:#FBBF24; --purp:#7C5CFF; --red:#FF5C5C;
+    --mono:"SF Mono",ui-monospace,SFMono-Regular,Menlo,monospace;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--ink);
+    font-family:Inter,system-ui,-apple-system,Segoe UI,Roboto,sans-serif;
+    font-feature-settings:"tnum" 1;}
+  .wrap{max-width:1100px;margin:0 auto;padding:28px 24px 60px}
+  header{display:flex;justify-content:space-between;align-items:flex-end;
+    border-bottom:1px solid var(--line);padding-bottom:18px;margin-bottom:24px}
+  .kick{color:var(--cyan);font-weight:800;font-size:12px;letter-spacing:1.5px}
+  h1{font-size:26px;font-weight:800;margin:4px 0 2px}
+  .thesis{color:var(--mute);font-size:14px;margin:0}
+  .stamp{color:var(--mute);font-size:12px;font-family:var(--mono);text-align:right}
+  .stamp .live{color:var(--green);font-weight:700}
+  .grid{display:grid;grid-template-columns:1.4fr 1fr;gap:18px}
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:18px}
+  .card h2{font-size:12px;letter-spacing:1px;color:var(--mute);font-weight:800;
+    margin:0 0 14px;text-transform:uppercase}
+  /* progress */
+  .prog{height:8px;border-radius:4px;background:var(--panel2);overflow:hidden;margin:2px 0 20px}
+  .prog>i{display:block;height:100%;background:linear-gradient(90deg,var(--cyan),var(--green));
+    transition:width .6s ease}
+  /* phases */
+  .phase{display:flex;gap:12px;align-items:flex-start;padding:11px 0;border-top:1px solid var(--line)}
+  .phase:first-child{border-top:0}
+  .bul{flex:none;width:22px;height:22px;border-radius:50%;display:grid;place-items:center;
+    font-size:12px;font-weight:800;margin-top:1px}
+  .b-done{background:var(--green);color:#04140D}
+  .b-active{background:var(--cyan);color:#04140D;box-shadow:0 0 0 4px #22d3ee22;
+    animation:pulse 1.6s infinite}
+  .b-pending{background:var(--panel2);color:var(--mute);border:1px solid var(--line)}
+  @keyframes pulse{0%,100%{box-shadow:0 0 0 4px #22d3ee22}50%{box-shadow:0 0 0 8px #22d3ee0a}}
+  .ptitle{font-weight:700;font-size:14px}
+  .pdetail{color:var(--mute);font-size:12.5px;margin-top:1px}
+  .phase.pending .ptitle{color:var(--mute)}
+  /* flow diagram */
+  .flow{font-family:var(--mono);font-size:12px;line-height:1.7;color:var(--mute);
+    background:var(--panel2);border-radius:10px;padding:14px;white-space:pre;overflow-x:auto}
+  .flow b{color:var(--cyan);font-weight:700}
+  /* services */
+  .svc{display:flex;justify-content:space-between;align-items:center;padding:9px 0;
+    border-top:1px solid var(--line)}
+  .svc:first-child{border-top:0}
+  .svc .nm{font-size:13px}
+  .svc .port{font-family:var(--mono);color:var(--mute);font-size:12px}
+  .led{display:inline-flex;align-items:center;gap:7px;font-size:12px;font-weight:700}
+  .led .d{width:8px;height:8px;border-radius:50%}
+  .up{color:var(--green)} .up .d{background:var(--green);box-shadow:0 0 6px var(--green)}
+  .down{color:var(--mute)} .down .d{background:#44444e}
+  /* git */
+  .kv{display:flex;justify-content:space-between;padding:7px 0;font-size:13px;border-top:1px solid var(--line)}
+  .kv:first-child{border-top:0}
+  .kv .k{color:var(--mute)} .kv .v{font-family:var(--mono);font-size:12px;text-align:right}
+  .tag{padding:2px 8px;border-radius:6px;font-size:11px;font-weight:700}
+  .clean{background:#34d39922;color:var(--green)} .dirty{background:#fbbf2422;color:var(--amber)}
+  /* files */
+  .files{max-height:230px;overflow:auto;font-family:var(--mono);font-size:12px}
+  .frow{display:flex;justify-content:space-between;padding:4px 0;color:var(--mute)}
+  .frow .fp{color:var(--ink)}
+  .full{grid-column:1/-1}
+  .foot{color:var(--mute);font-size:11px;text-align:center;margin-top:26px;font-family:var(--mono)}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div>
+      <div class="kick">VICARIOUS · BUILD MONITOR</div>
+      <h1 id="proj">—</h1>
+      <p class="thesis" id="thesis">—</p>
+    </div>
+    <div class="stamp">
+      <div class="live">● LIVE</div>
+      <div id="stamp">—</div>
+      <div id="age" style="opacity:.7">—</div>
+    </div>
+  </header>
+
+  <div class="prog"><i id="bar" style="width:0%"></i></div>
+
+  <div class="grid">
+    <div class="card">
+      <h2>Build Phases · <span id="pct">0</span>%</h2>
+      <div id="phases"></div>
+    </div>
+
+    <div class="card">
+      <h2>Services</h2>
+      <div id="svcs"></div>
+      <h2 style="margin-top:20px">Git</h2>
+      <div id="git"></div>
+    </div>
+
+    <div class="card full">
+      <h2>System · data flow</h2>
+      <div class="flow" id="flow">loading…</div>
+    </div>
+
+    <div class="card full">
+      <h2>Product files · <span id="nfiles">0</span></h2>
+      <div class="files" id="files"></div>
+    </div>
+  </div>
+  <div class="foot" id="foot">polling dev/state.json every 2s</div>
+</div>
+
+<script>
+const BUL={done:["b-done","✓"],active:["b-active","▶"],pending:["b-pending",""]};
+const FLOW=`  broadcaster cam ─▶ <b>frame_source</b> ─▶ <b>orchestrator</b> (60s loop)
+                                          │  grab frame every 2s
+                                          ▼
+   viewer browser ◀── WebSocket ◀── <b>server</b> (FastAPI)  :8000
+        │  renders <b>frames</b> pushed from server (no getUserMedia)
+        ▼
+   paywall  ─▶  live 60s POV  ─▶  done card`;
+
+async function tick(){
+  try{
+    const r=await fetch("state.json?t="+Date.now());
+    const s=await r.json();
+    document.getElementById("proj").textContent=s.project;
+    document.getElementById("thesis").textContent=s.thesis;
+    document.getElementById("stamp").textContent=s.generated_at;
+    const age=Math.max(0,Math.floor(Date.now()/1000)-s.generated_epoch);
+    document.getElementById("age").textContent=age+"s ago";
+    document.getElementById("bar").style.width=s.progress_pct+"%";
+    document.getElementById("pct").textContent=s.progress_pct;
+
+    document.getElementById("phases").innerHTML=s.phases.map(p=>{
+      const [cls,ic]=BUL[p.status]||BUL.pending;
+      return `<div class="phase ${p.status}"><span class="bul ${cls}">${ic}</span>
+        <div><div class="ptitle">${p.id}. ${p.title}</div>
+        <div class="pdetail">${p.detail}</div></div></div>`;
+    }).join("");
+
+    document.getElementById("svcs").innerHTML=s.services.map(v=>{
+      const c=v.up?"up":"down", t=v.up?"running":"down";
+      return `<div class="svc"><div><span class="nm">${v.name}</span>
+        <span class="port"> :${v.port}</span></div>
+        <span class="led ${c}"><span class="d"></span>${t}</span></div>`;
+    }).join("");
+
+    const g=s.git;
+    document.getElementById("git").innerHTML=
+      `<div class="kv"><span class="k">branch</span><span class="v">${g.branch}</span></div>
+       <div class="kv"><span class="k">last commit</span><span class="v">${g.last_commit||"—"}</span></div>
+       <div class="kv"><span class="k">tree</span><span class="v"><span class="tag ${g.dirty?'dirty':'clean'}">${g.dirty?'uncommitted':'clean'}</span></span></div>
+       <div class="kv"><span class="k">tracked files</span><span class="v">${g.n_files}</span></div>`;
+
+    document.getElementById("flow").innerHTML=FLOW;
+    document.getElementById("nfiles").textContent=s.files.length;
+    document.getElementById("files").innerHTML=s.files.map(f=>
+      `<div class="frow"><span class="fp">${f.path}</span><span>${f.lines} L</span></div>`).join("");
+    document.getElementById("foot").textContent="polling dev/state.json every 2s · "+s.generated_at;
+  }catch(e){
+    document.getElementById("foot").textContent="waiting for dev/state.json… ("+e+")";
+  }
+}
+tick(); setInterval(tick,2000);
+</script>
+</body>
+</html>

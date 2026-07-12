@@ -53,6 +53,7 @@ async def run_session(source: FrameSource, emit: Emit) -> dict:
     deadline = start + config.SESSION_SECONDS
     frames = 0
     refund = False
+    misses = 0  # consecutive dropped frames; only a sustained gap is "feed dark"
 
     await emit({"type": "session_start", "seconds": config.SESSION_SECONDS})
 
@@ -61,11 +62,17 @@ async def run_session(source: FrameSource, emit: Emit) -> dict:
         frame = await asyncio.to_thread(source.grab)
 
         if frame is None:
-            # Feed went dark (camera unplugged, glasses disconnected) → refund.
-            refund = True
-            await emit({"type": "feed_dark", "msg": "Feed went dark — issuing refund."})
-            break
+            # Tolerate transient drops (flaky USB / a single stale glasses frame);
+            # only refund if the feed stays dark for several grabs in a row.
+            misses += 1
+            if misses >= config.MAX_FRAME_MISSES:
+                refund = True
+                await emit({"type": "feed_dark", "msg": "Feed went dark — issuing refund."})
+                break
+            await asyncio.sleep(config.FRAME_INTERVAL_SECONDS)
+            continue
 
+        misses = 0
         await emit({"type": "frame", "data_url": frame, "remaining": remaining})
         frames += 1
         await asyncio.sleep(config.FRAME_INTERVAL_SECONDS)
