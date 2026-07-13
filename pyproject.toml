@@ -8,6 +8,7 @@ dependencies = [
     "uvicorn[standard]>=0.29",
     "opencv-python>=4.9",
     "python-dotenv>=1.0",
+    "fal-client>=1.0.0",
 ]
 
 [dependency-groups]

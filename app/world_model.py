@@ -60,6 +60,39 @@ class FakeWorld(WorldModel):
                 "note": "FakeWorld stub — swap WORLD_MODEL for a real generator"}
 
 
+class FalWorld(WorldModel):
+    """Real generative world model: image→video via fal.ai (LTX-Video).
+
+    The RENDERER function from the world-models taxonomy — a real POV frame in,
+    a generated moving world of that scene out. Takes ~30-60s per clip, so the
+    viewer shows a 'generating…' state while it runs.
+    """
+
+    MODEL = "fal-ai/ltx-video-13b-distilled/image-to-video"
+
+    def generate(self, seed_frame_data_url: str, intent: str = "") -> dict:
+        import fal_client
+
+        prompt = (intent.strip() or
+                  "cinematic slow dolly forward, exploring this world, vivid and alive")
+        result = fal_client.subscribe(
+            self.MODEL,
+            arguments={
+                "image_url": seed_frame_data_url,  # fal accepts data URLs
+                "prompt": prompt,
+            },
+        )
+        video_url = (result.get("video") or {}).get("url", "")
+        if not video_url:
+            return {"kind": "image", "data_url": seed_frame_data_url,
+                    "backend": "fal", "note": "no video returned — echoing seed"}
+        return {"kind": "video", "data_url": video_url, "backend": "fal-ltx",
+                "note": f"generated world · {prompt[:40]}…"}
+
+
 def build_world_model() -> WorldModel:
-    # real backends (cosmos / replicate / ...) plug in here once chosen.
+    if config.WORLD_MODEL == "fal" and config.FAL_KEY:
+        import os
+        os.environ.setdefault("FAL_KEY", config.FAL_KEY)  # fal_client reads env
+        return FalWorld()
     return FakeWorld()

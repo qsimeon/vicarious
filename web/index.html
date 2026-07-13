@@ -73,6 +73,8 @@
         <span id="worldnote" class="sub" style="font-size:11px"></span></div>
       <div class="pov" style="margin-top:10px;background:#000">
         <img id="world" alt="" />
+        <video id="worldvid" class="hidden" autoplay loop muted playsinline
+               style="width:100%;height:100%;object-fit:cover"></video>
         <span id="worldtext" style="position:absolute">generating…</span>
       </div>
     </div>
@@ -92,14 +94,19 @@ let total=60, left=60, tick=null, lastFrame=null;
 async function gamify(){
   if(!lastFrame){ return; }
   const btn=document.getElementById("gamifyBtn");
-  btn.disabled=true; btn.textContent="🌀 generating your world…";
+  const img=document.getElementById("world"), vid=document.getElementById("worldvid");
+  btn.disabled=true; btn.textContent="🌀 generating your world… (~30-60s)";
   document.getElementById("worldcard").classList.remove("hidden");
   document.getElementById("worldtext").textContent="generating…";
   try{
     const r=await fetch("/gamify",{method:"POST",headers:{"Content-Type":"application/json"},
       body:JSON.stringify({seed:lastFrame})});
     const d=await r.json();
-    document.getElementById("world").src=d.data_url;
+    if(d.kind==="video"){
+      img.classList.add("hidden"); vid.classList.remove("hidden"); vid.src=d.data_url;
+    }else{
+      vid.classList.add("hidden"); img.classList.remove("hidden"); img.src=d.data_url;
+    }
     document.getElementById("worldtext").textContent="";
     document.getElementById("worldnote").textContent=d.backend?("via "+d.backend):"";
   }catch(err){

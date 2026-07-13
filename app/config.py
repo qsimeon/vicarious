@@ -21,3 +21,7 @@ MENTRA_PACKAGE = os.getenv("MENTRA_PACKAGE", "com.vicarious.glasses")
 SESSION_SECONDS = _int("SESSION_SECONDS", 60)
 FRAME_INTERVAL_SECONDS = _int("FRAME_INTERVAL_SECONDS", 2)
 MAX_FRAME_MISSES = _int("MAX_FRAME_MISSES", 3)  # consecutive drops before refund
+
+# World model: "fake" (OpenCV stub) or "fal" (real image→video via fal.ai)
+WORLD_MODEL = os.getenv("WORLD_MODEL", "fake").lower()
+FAL_KEY = os.getenv("FAL_KEY", "")
