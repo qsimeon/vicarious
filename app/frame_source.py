@@ -1,6 +1,6 @@
 """Frame source abstraction.
 
-Everything downstream consumes base64 JPEG frames, so the agent pipeline never
+Everything downstream consumes base64 JPEG frames, so the rest of the app never
 knows whether a frame came from a webcam (demo-safe) or the Mentra glasses.
 Swap the source via FRAME_SOURCE in .env — flip in 30 seconds during the demo.
 """
@@ -73,7 +73,7 @@ class MentraSource(FrameSource):
         self._ts = time.time()
 
     def grab(self) -> Optional[str]:
-        # Treat frames older than 5s as "feed went dark" → triggers Guardian refund.
+        # Treat frames older than 5s as "feed went dark" → triggers refund.
         if self._latest is None or (time.time() - self._ts) > 5:
             return None
         return self._latest

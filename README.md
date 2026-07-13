@@ -6,21 +6,27 @@ The thesis: people already pay to live other lives — that's social media and
 games. Vicarious sells that directly. Start with just my POV; later, anyone with
 smart glasses can broadcast to paying viewers.
 
-> **This is the fundamental product, not the hackathon demo.** An earlier build
-> had an AI agent crew + Weave tracing; that was stripped out on 2026-07-01. The
-> product needs no LLM — it streams camera frames to a remote viewer. See
-> `../HANDOFF.md` for the full story and roadmap.
+**🎮 Gamify this** (Sundai World Models Hack): one click pipes the current POV
+frame through a real generative world model (fal.ai LTX-Video, image→video — the
+*Renderer* class) and shows a generated video of that scene beside the live feed.
+Pick a style: game / dream / noir / neon. *Play your life.*
+
+> **The streaming core is the fundamental product; the world model is the hack
+> layer on top.** An earlier build had an AI agent crew + Weave tracing; that was
+> stripped out on 2026-07-01. See `../HANDOFF.md` and `PITCH.md` for the full
+> story and roadmap. Honest scope: gamify is snapshot→video (~30s), not real-time.
 
 ## What's here
 
 ```
 app/
-  config.py        # frame-source + session settings
+  config.py        # frame-source + session + world-model settings
   frame_source.py  # FrameSource interface · WebcamSource (works) · MentraSource (stub)
   orchestrator.py  # 60s session loop: grab frame → push to viewer · single-viewer lock
-  server.py        # FastAPI + WebSocket, streams POV frames to the browser
+  world_model.py   # WorldModel interface · FalWorld (fal.ai LTX) · FakeWorld (no-API stub)
+  server.py        # FastAPI + WebSocket · /pay · /ws stream · /gamify
 web/
-  index.html       # viewer UI: paywall → live 60s → done
+  index.html       # viewer UI: paywall → live 60s → gamify → generated world
 run.py             # entrypoint: uvicorn app.server:app
 ```
 
