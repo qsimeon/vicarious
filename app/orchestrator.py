@@ -20,28 +20,60 @@ Emit = Callable[[dict], Awaitable[None]]
 
 
 class SessionManager:
-    """Single active session + FIFO queue (one human, one pair of eyes)."""
+    """Single active session + FIFO queue (one human, one pair of eyes).
+
+    Use as an async context manager so ownership is tracked and the lock is only
+    released by the handler that holds it:
+
+        async with manager.session(emit):
+            await run_session(...)
+
+    `_active` counts everyone holding-or-served (the streamer stays counted until
+    they finish), so queue positions and viewers_ahead are correct.
+    """
 
     def __init__(self):
         self._lock = asyncio.Lock()
-        self._waiting = 0
+        self._active = 0  # holders + waiters; decremented only when a session ends
 
     @property
     def viewers_ahead(self) -> int:
-        return self._waiting
+        return self._active
 
-    async def acquire(self, emit: Emit):
-        self._waiting += 1
-        pos = self._waiting - 1
+    def session(self, emit: Emit) -> "_Session":
+        return _Session(self, emit)
+
+
+class _Session:
+    """One handler's claim on the single session slot. Ownership-aware: only
+    releases the lock if this handler actually acquired it."""
+
+    def __init__(self, mgr: SessionManager, emit: Emit):
+        self._mgr = mgr
+        self._emit = emit
+        self._held = False
+
+    async def __aenter__(self):
+        mgr = self._mgr
+        pos = mgr._active  # how many are ahead of us right now
+        mgr._active += 1
         if pos > 0:
-            await emit({"type": "queue", "ahead": pos,
-                        "eta_sec": pos * config.SESSION_SECONDS})
-        await self._lock.acquire()
-        self._waiting -= 1
+            await self._emit({"type": "queue", "ahead": pos,
+                              "eta_sec": pos * config.SESSION_SECONDS})
+        try:
+            await mgr._lock.acquire()
+            self._held = True
+        except BaseException:
+            mgr._active -= 1  # never got the slot → stop counting us
+            raise
+        return self
 
-    def release(self):
-        if self._lock.locked():
-            self._lock.release()
+    async def __aexit__(self, *exc):
+        if self._held:
+            self._mgr._lock.release()
+            self._held = False
+            self._mgr._active -= 1
+        return False
 
 
 manager = SessionManager()

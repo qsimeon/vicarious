@@ -65,9 +65,9 @@ async def ws(sock: WebSocket):
 
     source = None
     try:
-        await manager.acquire(emit)
-        source = build_frame_source()
-        await run_session(source, emit)
+        async with manager.session(emit):
+            source = build_frame_source()
+            await run_session(source, emit)
     except WebSocketDisconnect:
         pass
     except Exception as e:
@@ -75,7 +75,6 @@ async def ws(sock: WebSocket):
     finally:
         if source is not None:
             source.close()
-        manager.release()
         try:
             await sock.close()
         except Exception:
