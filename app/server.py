@@ -32,10 +32,28 @@ def pay():
 
 @app.post("/gamify")
 async def gamify(seed: str = Body(..., embed=True), intent: str = Body("", embed=True)):
-    """Pipe the current POV frame through the world model → a generated world."""
+    """Pipe the current POV frame through the world model → a generated world.
+
+    Demo-safe: if the real backend errors, fall back to a pre-rendered clip so
+    the viewer never hangs on 'generating…'.
+    """
     import asyncio
-    result = await asyncio.to_thread(world.generate, seed, intent)
-    return JSONResponse(result)
+    try:
+        result = await asyncio.to_thread(world.generate, seed, intent)
+        return JSONResponse(result)
+    except Exception as e:
+        backup = WEB.parent / "dev" / "fal_world.mp4"
+        if backup.exists():
+            return JSONResponse({"kind": "video", "data_url": "/backup_world.mp4",
+                                 "backend": "backup", "note": f"live gen failed ({e}); backup clip"})
+        return JSONResponse({"kind": "image", "data_url": seed, "backend": "error",
+                             "note": str(e)})
+
+
+@app.get("/backup_world.mp4")
+def backup_world():
+    """Pre-rendered generated clip — the demo fallback if live gen is slow/down."""
+    return FileResponse(WEB.parent / "dev" / "fal_world.mp4")
 
 
 @app.websocket("/ws")

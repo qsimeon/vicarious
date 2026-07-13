@@ -70,11 +70,18 @@ class FalWorld(WorldModel):
 
     MODEL = "fal-ai/ltx-video-13b-distilled/image-to-video"
 
+    # A vivid default so the generated world reads as clearly *generated*, not a
+    # near-copy of the seed. Style presets from the UI override this via intent.
+    DEFAULT_PROMPT = (
+        "transform this scene into a vivid, surreal video-game world: dramatic "
+        "camera push-in, glowing volumetric light, the environment coming alive "
+        "and morphing, cinematic and dreamlike"
+    )
+
     def generate(self, seed_frame_data_url: str, intent: str = "") -> dict:
         import fal_client
 
-        prompt = (intent.strip() or
-                  "cinematic slow dolly forward, exploring this world, vivid and alive")
+        prompt = intent.strip() or self.DEFAULT_PROMPT
         result = fal_client.subscribe(
             self.MODEL,
             arguments={
