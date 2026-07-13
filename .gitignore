@@ -8,5 +8,9 @@ __pycache__/
 .playwright-mcp/
 dev/state.json
 dev/grounding.jpg
+dev/fal_result.txt
+dev/fal_world.mp4
+dev/fal_midframe.jpg
 *.png
 *.jpg
+*.mp4
