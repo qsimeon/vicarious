@@ -26,9 +26,11 @@ PHASES = [
     {"id": 3, "title": "Verify Pay→live→done flow",
      "detail": "Playwright drives the UI, screenshots each step", "status": "done"},
     {"id": 4, "title": "Commit MVP + anchor HANDOFF",
-     "detail": "git commit 'MVP verified', doc note", "status": "active"},
+     "detail": "git commit 'MVP verified', doc note", "status": "done"},
     {"id": 5, "title": "World-model layer (Tier-1)",
-     "detail": "POV frame → generative world beside the real feed", "status": "pending"},
+     "detail": "POV frame → fal.ai LTX → generated world video", "status": "done"},
+    {"id": 6, "title": "Mentra glasses (guided)",
+     "detail": "register app, tunnel, capture, bridge MentraSource", "status": "pending"},
 ]
 
 # --- live probes ------------------------------------------------------------
