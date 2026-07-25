@@ -10,7 +10,7 @@ import pathlib
 from fastapi import Body, FastAPI, WebSocket, WebSocketDisconnect
 from fastapi.responses import FileResponse, JSONResponse
 
-from .frame_source import build_frame_source
+from .frame_source import build_frame_source, get_mentra_source
 from .orchestrator import manager, run_session
 from .world_model import build_world_model
 
@@ -28,6 +28,15 @@ def index():
 def pay():
     """Mock Stripe checkout. Swap for a real Stripe Checkout + webhook later."""
     return JSONResponse({"paid": True, "viewers_ahead": manager.viewers_ahead})
+
+
+@app.post("/mentra/push")
+def mentra_push(data_url: str = Body(..., embed=True)):
+    """Receiver for the Mentra glasses bridge: a tiny MentraOS TS app POSTs each
+    captured photo here; we hand it to the shared MentraSource for the session
+    loop to read. (Set FRAME_SOURCE=mentra to stream from the glasses.)"""
+    get_mentra_source().push_frame(data_url)
+    return JSONResponse({"ok": True})
 
 
 @app.post("/gamify")

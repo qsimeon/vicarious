@@ -79,7 +79,19 @@ class MentraSource(FrameSource):
         return self._latest
 
 
+# Shared across sessions + the /mentra/push receiver so pushed frames land in
+# the same instance a session reads from.
+_mentra_singleton: Optional[MentraSource] = None
+
+
+def get_mentra_source() -> MentraSource:
+    global _mentra_singleton
+    if _mentra_singleton is None:
+        _mentra_singleton = MentraSource(config.MENTRA_API_KEY, config.MENTRA_PACKAGE)
+    return _mentra_singleton
+
+
 def build_frame_source() -> FrameSource:
     if config.FRAME_SOURCE == "mentra":
-        return MentraSource(config.MENTRA_API_KEY, config.MENTRA_PACKAGE)
+        return get_mentra_source()
     return WebcamSource(config.WEBCAM_INDEX)
