@@ -5,9 +5,10 @@ POV frames stream into the viewer's UI for 60s.
 """
 from __future__ import annotations
 
+import base64
 import pathlib
 
-from fastapi import Body, FastAPI, WebSocket, WebSocketDisconnect
+from fastapi import Body, FastAPI, File, Form, UploadFile, WebSocket, WebSocketDisconnect
 from fastapi.responses import FileResponse, JSONResponse
 
 from .frame_source import build_frame_source, get_mentra_source
@@ -30,11 +31,26 @@ def pay():
     return JSONResponse({"paid": True, "viewers_ahead": manager.viewers_ahead})
 
 
+@app.post("/mentra/photo")
+async def mentra_photo(photo: UploadFile = File(...), requestId: str = Form("")):
+    """Webhook for the Mentra Bluetooth SDK (Mentra Live camera glasses).
+
+    The phone-side app calls requestPhoto({webhookUrl: ".../mentra/photo"}) and
+    the glasses' JPEG arrives here as multipart form-data (`photo` + `requestId`).
+    We convert it to a data URL for the shared MentraSource.
+    Set FRAME_SOURCE=mentra to stream the glasses feed.
+    """
+    raw = await photo.read()
+    mime = photo.content_type or "image/jpeg"
+    data_url = f"data:{mime};base64," + base64.b64encode(raw).decode()
+    get_mentra_source().push_frame(data_url)
+    return JSONResponse({"ok": True, "requestId": requestId, "bytes": len(raw)})
+
+
 @app.post("/mentra/push")
 def mentra_push(data_url: str = Body(..., embed=True)):
-    """Receiver for the Mentra glasses bridge: a tiny MentraOS TS app POSTs each
-    captured photo here; we hand it to the shared MentraSource for the session
-    loop to read. (Set FRAME_SOURCE=mentra to stream from the glasses.)"""
+    """JSON variant of the glasses bridge (data URL in, for testing or a custom
+    bridge). The Bluetooth SDK itself uses /mentra/photo above."""
     get_mentra_source().push_frame(data_url)
     return JSONResponse({"ok": True})
 
