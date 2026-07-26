@@ -96,8 +96,10 @@ async def run_session(source: FrameSource, emit: Emit) -> dict:
         if frame is None:
             # Tolerate transient drops (flaky USB / a single stale glasses frame);
             # only refund if the feed stays dark for several grabs in a row.
+            # Before the first frame we're still "connecting" — wait much longer.
             misses += 1
-            if misses >= config.MAX_FRAME_MISSES:
+            limit = config.MAX_FRAME_MISSES if frames else config.MAX_FIRST_FRAME_MISSES
+            if misses >= limit:
                 refund = True
                 await emit({"type": "feed_dark", "msg": "Feed went dark — issuing refund."})
                 break

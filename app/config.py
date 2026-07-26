@@ -21,6 +21,9 @@ MENTRA_PACKAGE = os.getenv("MENTRA_PACKAGE", "com.vicarious.glasses")
 SESSION_SECONDS = _int("SESSION_SECONDS", 60)
 FRAME_INTERVAL_SECONDS = _int("FRAME_INTERVAL_SECONDS", 2)
 MAX_FRAME_MISSES = _int("MAX_FRAME_MISSES", 3)  # consecutive drops before refund
+# Be far more patient before the FIRST frame: the glasses may still be waking up
+# / waiting for a capture. A mid-session drop is a dead feed; an empty start isn't.
+MAX_FIRST_FRAME_MISSES = _int("MAX_FIRST_FRAME_MISSES", 20)
 
 # World model: "fake" (OpenCV stub) or "fal" (real image→video via fal.ai)
 WORLD_MODEL = os.getenv("WORLD_MODEL", "fake").lower()
