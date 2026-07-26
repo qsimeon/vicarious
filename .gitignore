@@ -13,3 +13,6 @@ dev/recording/
 *.png
 *.jpg
 *.mp4
+
+# cloned upstream starter kit (not part of this repo)
+Mentra-Bluetooth-SDK-Starter-Kit/
